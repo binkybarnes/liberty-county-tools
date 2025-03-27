@@ -17,7 +17,7 @@ click_sound = pygame.mixer.Sound("click_sound.mp3")  # Replace with your click s
 toggle_sound = pygame.mixer.Sound("toggle_sound.mp3")  # Replace with your toggle sound file
 
 
-class AutoClicker:
+class ColorChangeClicker:
     def __init__(self, master):
         self.master = master
         master.title("Color Change Clicker")
@@ -64,11 +64,6 @@ class AutoClicker:
 
                 # Capture a 1x1 pixel area around the sample coordinate
                 
-                ## imagegrab (SLOWWWW)
-                # screenshot = ImageGrab.grab(bbox)
-                # current_color = screenshot.getpixel((0, 0))  # Get the color of that single pixel
-
-                # mss
                 current_color = sct.grab(monitor).pixel(0, 0)
 
                 # Check if the current color differs from the reference color
@@ -115,5 +110,5 @@ listener.start()
 
 # Run the GUI
 root = tk.Tk()
-app = AutoClicker(root)
+app = ColorChangeClicker(root)
 root.mainloop()

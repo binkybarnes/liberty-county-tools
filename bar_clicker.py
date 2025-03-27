@@ -71,16 +71,6 @@ class VerticalBarAutoClicker:
         with mss() as sct:
             while self.monitoring:
                 # num_loops += 1
-                ## imagegrab (SLOWWWW)
-                # grabbed_image = ImageGrab.grab(bbox)
-                # # Extract the upper pixel (at the top of the grabbed image)
-                # upper_color = np.array(grabbed_image.getpixel((0, 0)))
-                # # Extract the lower pixel (at the bottom of the grabbed image)
-                # lower_color = np.array(grabbed_image.getpixel((0, 2 * OFFSET)))
-
-                # pyautogui
-                # upper_color = pyautogui.pixel(x, y + OFFSET)
-                # lower_color = pyautogui.pixel(x, y - OFFSET)
                 
                 # mss
                 img = sct.grab(monitor)
