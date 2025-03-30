@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from tkinter import ttk
 import threading
@@ -8,19 +9,34 @@ import pydirectinput
 from PIL import ImageGrab
 import numpy as np
 
+import os
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable
+        base_path = sys._MEIPASS  # PyInstaller temporary folder
+    else:
+        # Running as script
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, relative_path)
+
+
+
 class LibertySuite:
     def __init__(self, master):
         # Initialize pygame for sound
         pygame.mixer.init()
 
         # Sound files
-        self.click_sound = pygame.mixer.Sound("click_sound.mp3")
-        self.toggle_sound = pygame.mixer.Sound("toggle_sound.mp3")
+        self.click_sound = pygame.mixer.Sound(resource_path("sounds/click_sound.mp3"))
+        self.toggle_sound = pygame.mixer.Sound(resource_path("sounds/toggle_sound.mp3"))
 
         # Main window setup
         self.master = master
         master.title("Liberty County Tools")
-        master.geometry("270x150")  # Increased width
+        master.geometry("320x130")  # Increased width
         master.configure(bg="#2c3e50")
 
         # Custom font
@@ -61,7 +77,7 @@ class LibertySuite:
 
         # Frame for overall layout
         main_frame = ttk.Frame(master, style='TFrame')
-        main_frame.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+        main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
         # Vertical Bar Clicker Section
         self.bar_frame = ttk.Frame(main_frame, style='TFrame')
@@ -69,7 +85,7 @@ class LibertySuite:
 
         self.bar_button = ttk.Button(
             self.bar_frame, 
-            text="Vertical Bar Clicker", 
+            text="Vertical Bar Clicker: [", 
             style='Red.TButton', 
             command=self.toggle_bar_monitoring,
             width=25
@@ -85,7 +101,7 @@ class LibertySuite:
 
         self.color_button = ttk.Button(
             self.color_frame, 
-            text="Color Change Clicker", 
+            text="Color Change Clicker: ]", 
             style='Red.TButton', 
             command=self.toggle_color_monitoring,
             width=25
@@ -101,6 +117,9 @@ class LibertySuite:
         self.color_monitoring = False
         self.color_sample_coord = None
         self.color_reference_color = None
+
+        self.bar_cooldown_active = False
+        self.color_cooldown_active = False
 
         # Start keyboard listener
         self.listener = keyboard.Listener(on_press=self.on_press)
@@ -127,6 +146,22 @@ class LibertySuite:
         self.bar_button.configure(style='Red.TButton')
         self.bar_status.configure(text="Idle")
         self.toggle_sound.play()
+        if not self.bar_cooldown_active:
+            self.start_bar_cooldown()
+
+    def start_bar_cooldown(self):
+        self.bar_cooldown_active = True
+        threading.Thread(target=self.bar_cooldown_timer, daemon=True).start()
+
+    def bar_cooldown_timer(self):
+        cooldown_time = 300  # 5 minutes
+        while cooldown_time > 0:
+            mins, secs = divmod(cooldown_time, 60)
+            self.bar_status.configure(text=f"Cooldown: {mins}:{secs:02d}")
+            time.sleep(1)
+            cooldown_time -= 1
+        self.bar_status.configure(text="Ready")
+        self.bar_cooldown_active = False
 
     def bar_monitor(self):
         TARGET_COLOR = np.array((164, 165, 162))
@@ -174,6 +209,22 @@ class LibertySuite:
         self.color_button.configure(style='Red.TButton')
         self.color_status.configure(text="Idle")
         self.toggle_sound.play()
+        if not self.color_cooldown_active:
+            self.start_color_cooldown()
+
+    def start_color_cooldown(self):
+        self.color_cooldown_active = True
+        threading.Thread(target=self.color_cooldown_timer, daemon=True).start()
+
+    def color_cooldown_timer(self):
+        cooldown_time = 420  # 7 minutes
+        while cooldown_time > 0:
+            mins, secs = divmod(cooldown_time, 60)
+            self.color_status.configure(text=f"Cooldown: {mins}:{secs:02d}")
+            time.sleep(1)
+            cooldown_time -= 1
+        self.color_status.configure(text="Ready")
+        self.color_cooldown_active = False
 
     def color_monitor(self):
         x, y = self.color_sample_coord
