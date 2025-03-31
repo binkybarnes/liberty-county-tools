@@ -24,5 +24,5 @@ setup(
     version="1.0",
     description="atm, lockpick",
     options=options,
-    executables=[Executable("combined_gui.py", base=base)]
+    executables=[Executable("combined_gui.py", base=base)],
 )
