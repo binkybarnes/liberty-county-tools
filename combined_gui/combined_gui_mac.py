@@ -94,7 +94,7 @@ class LibertySuite:
             self.bar_frame,
             text="Set Coordinate: [",
             style="Red.TButton",
-            command=self.set_bar_coordinate,
+            command=self.toggle_bar_coordinate,
             width=15,
         )
         self.set_bar_coordinate_button.pack(side=tk.LEFT, padx=(0, 10))
@@ -119,7 +119,7 @@ class LibertySuite:
             self.color_frame,
             text="Set Coordinate: ]",
             style="Red.TButton",
-            command=self.set_color_coordinate,
+            command=self.toggle_color_coordinate,
             width=15,
         )
         self.set_color_coordinate_button.pack(side=tk.LEFT, padx=(0, 10))
@@ -148,6 +148,12 @@ class LibertySuite:
         self.listener.start()
 
     # Bar Clicker ┏━•❃°•°❀°•°❃•━┓
+    def toggle_bar_coordinate(self):
+        if self.bar_monitor_dict:
+            self.reset_bar_coordinate()
+        else:
+            self.set_bar_coordinate()
+
     def set_bar_coordinate(self):
         self.bar_center_coord = self.mouse.position
         x, y = self.bar_center_coord
@@ -163,7 +169,7 @@ class LibertySuite:
 
     def reset_bar_coordinate(self):
         self.set_bar_coordinate_button.configure(style="Red.TButton")
-        self.bar_montior_dict = None
+        self.bar_monitor_dict = None
 
     def toggle_bar_monitoring(self):
         if not self.bar_monitoring:
@@ -229,6 +235,12 @@ class LibertySuite:
     # Bar Clicker ┗━•❃°•°❀°•°❃•━┛
 
     # Color Clicker ┏━•❃°•°❀°•°❃•━┓
+    def toggle_color_coordinate(self):
+        if self.color_monitor_dict:
+            self.reset_color_coordinate()
+        else:
+            self.set_color_coordinate()
+
     def set_color_coordinate(self):
         # Set reference color
         self.color_sample_coord = self.mouse.position
@@ -245,7 +257,7 @@ class LibertySuite:
     def reset_color_coordinate(self):
         self.set_color_coordinate_button.configure(style="Red.TButton")
         self.color_reference_color = None
-        self.color_montior_dict = None
+        self.color_monitor_dict = None
 
     def toggle_color_monitoring(self):
         if not self.color_monitoring:
@@ -285,12 +297,17 @@ class LibertySuite:
     def color_monitor(self):
         with mss() as sct:
             while self.color_monitoring:
-                if not self.color_reference_color or not self.color_monitor_dict:
+                # color reference color is set on set_coordinate
+                if not self.color_monitor_dict:
                     time.sleep(0.001)
                     continue
-                # color reference color is set on set coordinate
                 current_color = sct.grab(self.color_monitor_dict).pixel(0, 0)
-
+                # reset_color_coordinate() can get rid of these while the loop is running
+                # i need a if statement after sct grab because its the slowest statement
+                # and it makes it so the reset variables get reset when sct grab is running
+                if not self.color_reference_color:
+                    time.sleep(0.001)
+                    continue
                 if any(
                     abs(c - r) > 20
                     for c, r in zip(current_color, self.color_reference_color)
@@ -306,10 +323,10 @@ class LibertySuite:
         try:
             # Vertical Bar Clicker (hotkey '[')
             if key.char == "[":
-                self.set_bar_coordinate()
+                self.toggle_bar_coordinate()
             # Color Change Clicker (hotkey ']')
             elif key.char == "]":
-                self.set_color_coordinate()
+                self.toggle_color_coordinate()
         except AttributeError:
             pass
 
