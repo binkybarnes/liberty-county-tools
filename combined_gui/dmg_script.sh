@@ -8,5 +8,4 @@ create-dmg \
 
 # make writable
 # hdiutil convert "Liberty County Tools Installer.dmg" -format UDRW -o "Liberty County Tools Writable.dmg"
-
-# convert it back to UDZO
+# pyinstaller --onefile --windowed --icon=kuromi.png --add-data "sound/:sound" --add-data "kuromi.png:." --name "Liberty County Tools" combined_gui_mac.py

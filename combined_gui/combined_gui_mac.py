@@ -15,6 +15,11 @@ def sound_thread(sound_path):
     threading.Thread(target=playsound, args=(sound_path,), daemon=True).start()
 
 
+# constants for bar monitor
+TARGET_COLOR_BAR = np.array((164, 165, 162))
+COLOR_TOLERANCE_BAR = 30
+OFFSET = 2
+
 if getattr(sys, "frozen", False):
     # If running as a packaged app
     base_path = sys._MEIPASS
@@ -26,17 +31,16 @@ else:
 class LibertySuite:
     def __init__(self, master):
         # Sound files
-        self.click_sound = os.path.join(
-            base_path, "sounds/click_sound.mp3"
-        )  # File path for click sound
-        self.toggle_sound = os.path.join(
-            base_path, "sounds/toggle_sound.mp3"
-        )  # File path for toggle sound
+        self.toggle_sound = os.path.join(base_path, "sounds/toggle_sound.mp3")
+        self.coordinate_set_sound = os.path.join(
+            base_path, "sounds/coordinate_set_sound.mp3"
+        )
+        self.click_sound = os.path.join(base_path, "sounds/click_sound.mp3")
 
         # Main window setup
         self.master = master
         master.title("Liberty County Tools")
-        master.geometry("320x130")  # Increased width
+        master.geometry("400x120")  # Increased width
         master.configure(bg="#2c3e50")
 
         # Custom font
@@ -79,12 +83,21 @@ class LibertySuite:
 
         self.bar_button = ttk.Button(
             self.bar_frame,
-            text="Vertical Bar Clicker: [",
+            text="Vertical Bar Clicker",
             style="Red.TButton",
             command=self.toggle_bar_monitoring,
-            width=25,
+            width=20,
         )
         self.bar_button.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.set_bar_coordinate_button = ttk.Button(
+            self.bar_frame,
+            text="Set Coordinate: [",
+            style="Red.TButton",
+            command=self.set_bar_coordinate,
+            width=15,
+        )
+        self.set_bar_coordinate_button.pack(side=tk.LEFT, padx=(0, 10))
 
         self.bar_status = ttk.Label(self.bar_frame, text="Idle")
         self.bar_status.pack(side=tk.LEFT)
@@ -95,12 +108,21 @@ class LibertySuite:
 
         self.color_button = ttk.Button(
             self.color_frame,
-            text="Color Change Clicker: ]",
+            text="Color Change Clicker",
             style="Red.TButton",
             command=self.toggle_color_monitoring,
-            width=25,
+            width=20,
         )
         self.color_button.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.set_color_coordinate_button = ttk.Button(
+            self.color_frame,
+            text="Set Coordinate: ]",
+            style="Red.TButton",
+            command=self.set_color_coordinate,
+            width=15,
+        )
+        self.set_color_coordinate_button.pack(side=tk.LEFT, padx=(0, 10))
 
         self.color_status = ttk.Label(self.color_frame, text="Idle")
         self.color_status.pack(side=tk.LEFT)
@@ -115,6 +137,9 @@ class LibertySuite:
         self.bar_cooldown_active = False
         self.color_cooldown_active = False
 
+        self.bar_monitor_dict = None
+        self.color_monitor_dict = None
+
         # Create mouse controller using pynput.mouse
         self.mouse = Controller()
 
@@ -122,19 +147,34 @@ class LibertySuite:
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
 
+    # Bar Clicker ┏━•❃°•°❀°•°❃•━┓
+    def set_bar_coordinate(self):
+        self.bar_center_coord = self.mouse.position
+        x, y = self.bar_center_coord
+        self.bar_monitor_dict = {
+            "top": y + OFFSET,
+            "left": x,
+            "width": 1,
+            "height": 2 * OFFSET + 1,
+        }
+        self.set_bar_coordinate_button.configure(style="Green.TButton")
+        self.color_status.configure(text="Monitoring")
+        sound_thread(self.coordinate_set_sound)
+
+    def reset_bar_coordinate(self):
+        self.set_bar_coordinate_button.configure(style="Red.TButton")
+        self.bar_montior_dict = None
+
     def toggle_bar_monitoring(self):
         if not self.bar_monitoring:
-            # Start monitoring
-            self.bar_center_coord = self.mouse.position
             self.bar_start_monitoring()
         else:
-            # Stop monitoring
             self.bar_stop_monitoring()
 
     def bar_start_monitoring(self):
         self.bar_monitoring = True
         self.bar_button.configure(style="Green.TButton")
-        self.bar_status.configure(text="Monitoring")
+        self.bar_status.configure(text="waiting4coord")
         threading.Thread(target=self.bar_monitor, daemon=True).start()
         sound_thread(self.toggle_sound)  # Play the toggle sound using playsound
 
@@ -155,22 +195,18 @@ class LibertySuite:
         while cooldown_time > 0:
             mins, secs = divmod(cooldown_time, 60)
             self.bar_status.configure(text=f"Cooldown: {mins}:{secs:02d}")
-            time.sleep(1)
             cooldown_time -= 1
         self.bar_status.configure(text="Ready")
         self.bar_cooldown_active = False
 
     def bar_monitor(self):
-        TARGET_COLOR_BAR = np.array((164, 165, 162))
-        COLOR_TOLERANCE_BAR = 30
-        OFFSET = 2
-
-        x, y = self.bar_center_coord
-        monitor = {"top": y + OFFSET, "left": x, "width": 1, "height": 2 * OFFSET + 1}
-
         with mss() as sct:
             while self.bar_monitoring:
-                img = sct.grab(monitor)
+                if not self.bar_monitor_dict:
+                    time.sleep(0.001)
+                    continue
+
+                img = sct.grab(self.bar_monitor_dict)
                 upper_color = img.pixel(0, 0)
                 lower_color = img.pixel(0, 2 * OFFSET)
 
@@ -187,19 +223,32 @@ class LibertySuite:
                     sound_thread(
                         self.click_sound
                     )  # Play the click sound using playsound
-                    self.bar_stop_monitoring()
-                    break
+
+                    self.reset_bar_coordinate()
+
+    # Bar Clicker ┗━•❃°•°❀°•°❃•━┛
+
+    # Color Clicker ┏━•❃°•°❀°•°❃•━┓
+    def set_color_coordinate(self):
+        # Set reference color
+        self.color_sample_coord = self.mouse.position
+        x, y = self.color_sample_coord
+        with mss() as sct:
+            monitor = {"top": y, "left": x, "width": 1, "height": 1}
+            self.color_reference_color = sct.grab(monitor).pixel(0, 0)
+
+        self.color_monitor_dict = {"top": y, "left": x, "width": 1, "height": 1}
+        self.set_color_coordinate_button.configure(style="Green.TButton")
+        self.color_status.configure(text="Monitoring")
+        sound_thread(self.coordinate_set_sound)
+
+    def reset_color_coordinate(self):
+        self.set_color_coordinate_button.configure(style="Red.TButton")
+        self.color_reference_color = None
+        self.color_montior_dict = None
 
     def toggle_color_monitoring(self):
-
         if not self.color_monitoring:
-            # Set reference color
-            self.color_sample_coord = self.mouse.position
-            x, y = self.color_sample_coord
-            monitor = {"top": y, "left": x, "width": 1, "height": 1}
-            with mss() as sct:
-                self.color_reference_color = sct.grab(monitor).pixel(0, 0)
-
             self.color_start_monitoring()
         else:
             self.color_stop_monitoring()
@@ -207,7 +256,7 @@ class LibertySuite:
     def color_start_monitoring(self):
         self.color_monitoring = True
         self.color_button.configure(style="Green.TButton")
-        self.color_status.configure(text="Monitoring")
+        self.color_status.configure(text="waiting4coord")
         threading.Thread(target=self.color_monitor, daemon=True).start()
         sound_thread(self.toggle_sound)  # Play the toggle sound using playsound
 
@@ -234,34 +283,33 @@ class LibertySuite:
         self.color_cooldown_active = False
 
     def color_monitor(self):
-        from PIL import ImageGrab  # Imported here since it's only used in color_monitor
-
-        x, y = self.color_sample_coord
-        monitor = {"top": y, "left": x, "width": 1, "height": 1}
-
         with mss() as sct:
             while self.color_monitoring:
-                current_color = sct.grab(monitor).pixel(0, 0)
+                if not self.color_reference_color or not self.color_monitor_dict:
+                    time.sleep(0.001)
+                    continue
+                # color reference color is set on set coordinate
+                current_color = sct.grab(self.color_monitor_dict).pixel(0, 0)
 
                 if any(
                     abs(c - r) > 20
                     for c, r in zip(current_color, self.color_reference_color)
                 ):
                     self.mouse.click(Button.left, 1)
-                    sound_thread(
-                        self.click_sound
-                    )  # Play the click sound using playsound
-                    self.color_stop_monitoring()
-                    break
+                    sound_thread(self.click_sound)
+
+                    self.reset_color_coordinate()  # sets color reference color and monitor dict to none
+
+    # Color Clicker ┗━•❃°•°❀°•°❃•━┛
 
     def on_press(self, key):
         try:
             # Vertical Bar Clicker (hotkey '[')
             if key.char == "[":
-                self.toggle_bar_monitoring()
+                self.set_bar_coordinate()
             # Color Change Clicker (hotkey ']')
             elif key.char == "]":
-                self.toggle_color_monitoring()
+                self.set_color_coordinate()
         except AttributeError:
             pass
 
