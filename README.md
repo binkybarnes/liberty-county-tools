@@ -15,8 +15,8 @@ A set of automation tools for **Emergency Response: Liberty County** on Roblox.
 ## Installation (macOS)
 
 1. **Download & Open the `.dmg`**
-   - Go to the **Releases** tab in GitHub and download `Liberty County Tools GUI.dmg`.
-   - Double-click `Liberty County Tools GUI.dmg`.
+   - Go to the **Releases** tab in GitHub and download `Liberty County Tool.dmg`.
+   - Double-click `Liberty County Tool.dmg`.
 2. **Install the Application**
    - Drag `Liberty County Tools.app` into the `Applications` folder.
 3. **Grant Required Permissions** (Hotkeys & Mouse Automation)
